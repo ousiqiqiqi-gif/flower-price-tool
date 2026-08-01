@@ -14,7 +14,7 @@ st.set_page_config(
 
 
 # =================
-# 读取数据库
+# 数据读取
 # =================
 
 file_name = "flower_database.xlsx"
@@ -34,9 +34,7 @@ required_columns = [
 for col in required_columns:
 
     if col not in df.columns:
-
         st.error(f"Excel缺少字段：{col}")
-
         st.stop()
 
 
@@ -51,6 +49,7 @@ flowers = {}
 for _, row in df.iterrows():
 
     name = row["名称"]
+
 
     if "单枝成本" in df.columns and pd.notna(row["单枝成本"]):
 
@@ -68,13 +67,8 @@ for _, row in df.iterrows():
     flowers[name] = {
 
         "type": row["类别"],
-
         "flower_type": row["花材类型"],
-
-        "batch_price": float(row["单价"]),
-
         "count": int(row["每扎数量"]),
-
         "single_price": single_cost
 
     }
@@ -88,7 +82,7 @@ for _, row in df.iterrows():
 st.title("🌸 花店报价工具")
 
 st.caption(
-    "内部员工使用｜快速计算花材成本与建议售价"
+    "内部员工使用｜选择花材 → 输入数量 → 自动生成报价"
 )
 
 
@@ -100,21 +94,20 @@ st.caption(
 with st.expander("📦 采购信息"):
 
     freight = st.number_input(
-        "本次采购运费（元）",
+        "采购运费（元）",
         min_value=0,
         value=80
     )
 
 
     total_batch = st.number_input(
-        "本次采购总扎数",
+        "采购总扎数",
         min_value=1,
         value=50
     )
 
 
 batch_freight = freight / total_batch
-
 
 
 st.info(
@@ -124,44 +117,140 @@ st.info(
 
 
 # =================
-# 搜索花材
+# 分类整理
+# =================
+
+flower_types = {}
+
+leaf_types = {}
+
+
+for name,data in flowers.items():
+
+    category = data["flower_type"]
+
+
+    if data["type"] == "花材":
+
+        flower_types.setdefault(
+            category,
+            []
+        ).append(name)
+
+
+    elif data["type"] == "叶材":
+
+        leaf_types.setdefault(
+            category,
+            []
+        ).append(name)
+
+
+
+# =================
+# 搜索辅助
 # =================
 
 st.divider()
 
-st.subheader("🌹 选择花材")
+st.subheader("🔍 快速搜索花材")
 
 
-search = st.text_input(
-    "搜索花材名称"
+keyword = st.text_input(
+    "输入花材名称（可选）"
 )
 
 
-all_names = list(flowers.keys())
+search_selected = []
 
 
-if search:
+if keyword:
 
-    search_result = [
 
-        x for x in all_names
+    result = [
 
-        if search in x
+        x for x in flowers.keys()
+
+        if keyword in x
 
     ]
 
-else:
 
-    search_result = all_names
+    search_selected = st.multiselect(
+        "搜索结果",
+        result
+    )
 
 
 
-selected_all = st.multiselect(
+# =================
+# 分类选择
+# =================
 
-    "选择花材",
+st.subheader("🌹 选择花材")
 
-    search_result
 
+selected_flowers = []
+
+
+for category,items in flower_types.items():
+
+    with st.expander(
+        category
+    ):
+
+
+        result = st.multiselect(
+
+            "选择",
+
+            items,
+
+            key="flower_"+category
+
+        )
+
+
+        selected_flowers.extend(result)
+
+
+
+st.subheader("🍃 选择叶材")
+
+
+selected_leaf = []
+
+
+for category,items in leaf_types.items():
+
+    with st.expander(
+        category
+    ):
+
+
+        result = st.multiselect(
+
+            "选择",
+
+            items,
+
+            key="leaf_"+category
+
+        )
+
+
+        selected_leaf.extend(result)
+
+
+
+selected_all = list(
+    set(
+        selected_flowers
+        +
+        selected_leaf
+        +
+        search_selected
+    )
 )
 
 
@@ -170,15 +259,15 @@ selected_all = st.multiselect(
 # 数量
 # =================
 
-
 cost_total = 0
-
 
 
 if selected_all:
 
 
-    st.subheader("填写使用数量")
+    st.divider()
+
+    st.subheader("✏️ 填写使用数量")
 
 
     for item in selected_all:
@@ -186,7 +275,7 @@ if selected_all:
 
         quantity = st.number_input(
 
-            f"{item}（枝）",
+            item,
 
             min_value=1,
 
@@ -194,7 +283,7 @@ if selected_all:
 
             step=1,
 
-            key=item
+            key="num_"+item
 
         )
 
@@ -210,7 +299,7 @@ if selected_all:
         )
 
 
-        real_single_cost = (
+        real_cost = (
 
             flowers[item]["single_price"]
 
@@ -227,16 +316,15 @@ if selected_all:
 
             *
 
-            real_single_cost
+            real_cost
 
         )
 
 
 
 # =================
-# 计算
+# 计算报价
 # =================
-
 
 if st.button(
     "🌸 生成报价",
@@ -260,7 +348,7 @@ if st.button(
         cost_x3 = cost_total * 3
 
 
-        final_price = cost_x3 + labor
+        base_price = cost_x3 + labor
 
 
 
@@ -268,17 +356,17 @@ if st.button(
 
 
         st.subheader(
-            "报价明细"
+            "📋 报价明细"
         )
 
-
-        detail = ""
 
 
         for item in selected_all:
 
 
-            quantity = st.session_state[item]
+            quantity = st.session_state[
+                "num_"+item
+            ]
 
 
             freight_per_branch = (
@@ -292,7 +380,7 @@ if st.button(
             )
 
 
-            real_single_cost = (
+            real_cost = (
 
                 flowers[item]["single_price"]
 
@@ -303,43 +391,42 @@ if st.button(
             )
 
 
-            detail += (
+            st.write(
 
                 f"""
 🌸 {item}
 
-数量：{quantity}枝
-
-单枝成本：
-¥{round(real_single_cost,2)}
+{quantity}枝 × {round(real_cost,2)}元
 
 小计：
-¥{round(quantity*real_single_cost,2)}
-
----
+¥{round(quantity*real_cost,2)}
 
 """
+
             )
-
-
-        st.text(detail)
 
 
 
         st.divider()
 
 
-
-        st.metric(
-            "真实成本",
-            f"¥{round(cost_total,2)}"
-        )
+        col1,col2 = st.columns(2)
 
 
-        st.metric(
-            "基础售价",
-            f"¥{round(final_price,2)}"
-        )
+        with col1:
+
+            st.metric(
+                "真实成本",
+                f"¥{round(cost_total,2)}"
+            )
+
+
+        with col2:
+
+            st.metric(
+                "基础售价",
+                f"¥{round(base_price,2)}"
+            )
 
 
 
@@ -356,15 +443,15 @@ if st.button(
         ]
 
 
-        recommended_price = 1298
+        recommend = 1298
 
 
-        for price in price_level:
+        for p in price_level:
 
 
-            if final_price <= price:
+            if base_price <= p:
 
-                recommended_price = price
+                recommend = p
 
                 break
 
@@ -372,6 +459,6 @@ if st.button(
 
         st.success(
 
-            f"🌸 建议零售价：¥{recommended_price}"
+            f"🌸 建议零售价：¥{recommend}"
 
         )
