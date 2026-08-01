@@ -3,9 +3,9 @@ import pandas as pd
 from datetime import datetime
 
 
-# =================
+# =====================
 # 页面设置
-# =================
+# =====================
 
 st.set_page_config(
     page_title="花店报价工具",
@@ -13,21 +13,16 @@ st.set_page_config(
 )
 
 
-# =================
-# 读取花材数据库
-# =================
+# =====================
+# 数据读取
+# =====================
 
 file_name = "flower_database.xlsx"
 
 df = pd.read_excel(file_name)
 
 
-
-# =================
-# 检查字段
-# =================
-
-required_columns = [
+required = [
     "名称",
     "类别",
     "花材类型",
@@ -36,21 +31,16 @@ required_columns = [
 ]
 
 
-for col in required_columns:
-
-    if col not in df.columns:
-
-        st.error(
-            f"Excel缺少字段：{col}"
-        )
-
+for c in required:
+    if c not in df.columns:
+        st.error(f"缺少字段：{c}")
         st.stop()
 
 
 
-# =================
-# 花材数据整理
-# =================
+# =====================
+# 数据整理
+# =====================
 
 flowers = {}
 
@@ -60,13 +50,16 @@ for _, row in df.iterrows():
     name = row["名称"]
 
 
-    if "单枝成本" in df.columns and pd.notna(row["单枝成本"]):
+    if (
+        "单枝成本" in df.columns
+        and pd.notna(row["单枝成本"])
+    ):
 
-        single_cost = float(row["单枝成本"])
+        cost = float(row["单枝成本"])
 
     else:
 
-        single_cost = (
+        cost = (
             float(row["单价"])
             /
             int(row["每扎数量"])
@@ -75,30 +68,26 @@ for _, row in df.iterrows():
 
     flowers[name] = {
 
-        "type": row["类别"],
+        "类别": row["类别"],
 
-        "flower_type": row["花材类型"],
+        "类型": row["花材类型"],
 
-        "batch_price": float(row["单价"]),
+        "单枝成本": cost,
 
-        "count": int(row["每扎数量"]),
+        "每扎数量": int(row["每扎数量"])
 
-        "single_price": single_cost
     }
 
 
 
-# =================
-# 标题
-# =================
+# =====================
+# 初始化
+# =====================
 
-st.title("🌸 花店报价工具")
+if "selected" not in st.session_state:
 
+    st.session_state.selected = []
 
-
-# =================
-# 初始化历史记录
-# =================
 
 if "history" not in st.session_state:
 
@@ -106,335 +95,339 @@ if "history" not in st.session_state:
 
 
 
-# =================
-# 采购信息
-# =================
+# =====================
+# 标题
+# =====================
 
-st.subheader("采购信息")
-
-
-freight = st.number_input(
-    "本次采购运费（元）",
-    min_value=0,
-    value=80
-)
+st.title("🌸 花店报价工具")
 
 
-total_batch = st.number_input(
-    "本次采购总扎数",
-    min_value=1,
-    value=50
-)
+
+# =====================
+# 搜索
+# =====================
+
+st.subheader("🔍 搜索花材")
 
 
-batch_freight = freight / total_batch
-
-
-st.info(
-    f"平均每扎运费：{round(batch_freight,2)}元"
+keyword = st.text_input(
+    "输入花材名称"
 )
 
 
 
-st.divider()
+if keyword:
+
+
+    results = [
+
+        x for x in flowers.keys()
+
+        if keyword in x
+
+    ]
+
+
+    if results:
+
+
+        for item in results:
+
+
+            col1,col2 = st.columns([3,1])
+
+
+            with col1:
+
+                st.write(
+                    f"{item}  单枝成本 {round(flowers[item]['单枝成本'],2)}元"
+                )
+
+
+            with col2:
+
+                if st.button(
+                    "添加",
+                    key="add_"+item
+                ):
+
+                    if item not in st.session_state.selected:
+
+                        st.session_state.selected.append(item)
+
+                        st.rerun()
 
 
 
-# =================
-# 分类
-# =================
-
-flower_types = {}
-
-leaf_types = {}
-
-
-for name,data in flowers.items():
-
-
-    if data["type"] == "花材":
-
-        category=data["flower_type"]
-
-        if category not in flower_types:
-
-            flower_types[category]=[]
-
-        flower_types[category].append(name)
-
-
-
-    elif data["type"]=="叶材":
-
-        category=data["flower_type"]
-
-        if category not in leaf_types:
-
-            leaf_types[category]=[]
-
-        leaf_types[category].append(name)
-
-
-
-
-# =================
-# 选择花材
-# =================
+# =====================
+# 分类选择
+# =====================
 
 st.subheader("选择花材")
 
 
-selected_flowers=[]
+categories={}
 
 
-for category,items in flower_types.items():
+for name,data in flowers.items():
 
-    with st.expander(category):
+    if data["类别"]=="花材":
 
-        result=st.multiselect(
+        cat=data["类型"]
+
+        if cat not in categories:
+
+            categories[cat]=[]
+
+        categories[cat].append(name)
+
+
+
+for cat,items in categories.items():
+
+    with st.expander(cat):
+
+
+        choose = st.multiselect(
+
             "选择",
+
             items,
-            key="flower_"+category
-        )
 
-        selected_flowers.extend(result)
-
-
-
-# =================
-# 选择叶材
-# =================
-
-st.subheader("选择叶材")
-
-
-selected_leaf=[]
-
-
-for category,items in leaf_types.items():
-
-    with st.expander(category):
-
-        result=st.multiselect(
-            "选择",
-            items,
-            key="leaf_"+category
-        )
-
-        selected_leaf.extend(result)
-
-
-
-selected_all = selected_flowers + selected_leaf
-
-
-
-# =================
-# 数量
-# =================
-
-cost_total=0
-
-
-if selected_all:
-
-
-    st.subheader("填写使用数量")
-
-
-    for item in selected_all:
-
-
-        quantity=st.number_input(
-
-            f"{item} 使用数量（枝）",
-
-            min_value=1,
-
-            value=1,
-
-            key="num_"+item
+            key="cat_"+cat
 
         )
 
 
-        freight_branch = (
-            batch_freight
-            /
-            flowers[item]["count"]
+        for item in choose:
+
+            if item not in st.session_state.selected:
+
+                st.session_state.selected.append(item)
+
+
+
+
+# =====================
+# 已选花材
+# =====================
+
+
+if st.session_state.selected:
+
+
+    st.divider()
+
+    st.subheader("📋 已选花材")
+
+
+    total_cost=0
+
+
+
+    for item in st.session_state.selected:
+
+
+        num_key="num_"+item
+
+
+        if num_key not in st.session_state:
+
+            st.session_state[num_key]=1
+
+
+
+        col1,col2,col3=st.columns(
+            [3,1,1]
         )
 
 
-        real_cost = (
+        with col1:
 
-            flowers[item]["single_price"]
+            st.write(item)
 
-            +
 
-            freight_branch
+        with col2:
+
+
+            st.session_state[num_key]=st.number_input(
+
+                "数量",
+
+                min_value=1,
+
+                step=1,
+
+                key=num_key,
+
+                label_visibility="collapsed"
+
+            )
+
+
+        with col3:
+
+
+            if st.button(
+                "删除",
+                key="del_"+item
+            ):
+
+                st.session_state.selected.remove(item)
+
+                st.rerun()
+
+
+
+        qty=st.session_state[num_key]
+
+
+        total_cost += (
+
+            qty
+            *
+            flowers[item]["单枝成本"]
 
         )
 
 
-        cost_total += quantity * real_cost
+
+    st.divider()
 
 
+    # =====================
+    # 报价
+    # =====================
 
 
-# =================
-# 计算
-# =================
+    if st.button(
+        "💰 生成报价"
+    ):
 
-if st.button("计算报价"):
-
-
-    if not selected_all:
-
-        st.warning(
-            "请选择花材"
-        )
-
-
-    else:
-
-
-        cost_x3 = cost_total*3
 
 
         labor=100
 
 
-        final_price = cost_x3 + labor
+        base_price=(
+
+            total_cost*3
+
+            +
+
+            labor
+
+        )
 
 
-
-        price_level=[
+        levels=[
 
             56,68,88,98,
             128,158,198,
             228,268,298,
             358,398,498,
             598,698,898,
-            998,1098,1198,
-            1298
+            998,1298
 
         ]
 
 
-        recommended_price=1298
+        price=1298
 
 
-        for p in price_level:
+        for p in levels:
 
-            if final_price<=p:
+            if base_price<=p:
 
-                recommended_price=p
+                price=p
 
                 break
 
 
 
-        st.session_state.current_quote={
+        profit=price-total_cost-labor
+
+
+
+        st.session_state.quote={
 
             "时间":
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M"
+            ),
 
             "花材":
-            "、".join(selected_all),
+
+            "、".join(st.session_state.selected),
 
             "成本":
-            round(cost_total,2),
+
+            round(total_cost,2),
 
             "售价":
-            recommended_price
+
+            price
+
         }
 
 
 
-
-        st.divider()
-
-        st.subheader("报价明细")
-
-
-        for item in selected_all:
-
-
-            quantity=st.session_state["num_"+item]
-
-
-            freight_branch = (
-                batch_freight
-                /
-                flowers[item]["count"]
-            )
-
-
-            real_cost=(
-
-                flowers[item]["single_price"]
-
-                +
-
-                freight_branch
-
-            )
-
-
-            st.write(
-
-                f"{item}：{quantity}枝 × {round(real_cost,2)}元 = {round(quantity*real_cost,2)}元"
-
-            )
-
+        st.success(
+            "报价生成完成"
+        )
 
 
         st.divider()
 
 
-        st.write(
-            "真实成本：",
-            round(cost_total,2),
-            "元"
+        st.subheader(
+            "🌸 报价结果"
         )
 
 
         st.write(
-            "成本×3：",
-            round(cost_x3,2),
-            "元"
+            f"花材成本：¥{round(total_cost,2)}"
         )
 
 
         st.write(
-            "人工杂费：100元"
+            "制作费用：¥100"
+        )
+
+
+        st.write(
+            f"基础售价：¥{round(base_price,2)}"
         )
 
 
         st.success(
+            f"建议售价：¥{price}"
+        )
 
-            f"建议零售价：{recommended_price}元"
 
+        st.write(
+            f"预计利润：¥{round(profit,2)}"
         )
 
 
 
-# =================
-# 保存报价
-# =================
-
-if "current_quote" in st.session_state:
+# =====================
+# 保存
+# =====================
 
 
-    st.divider()
+if "quote" in st.session_state:
 
 
-    if st.button("💾 保存本次报价"):
+    if st.button(
+        "💾 保存报价"
+    ):
 
 
         st.session_state.history.append(
 
-            st.session_state.current_quote
+            st.session_state.quote
 
         )
 
@@ -445,25 +438,56 @@ if "current_quote" in st.session_state:
 
 
 
-# =================
+# =====================
+# 新建报价
+# =====================
+
+
+if st.button(
+    "🔄 新建报价"
+):
+
+
+    st.session_state.selected=[]
+
+
+    for key in list(st.session_state.keys()):
+
+        if key.startswith("num_"):
+
+            del st.session_state[key]
+
+
+    if "quote" in st.session_state:
+
+        del st.session_state["quote"]
+
+
+    st.rerun()
+
+
+
+# =====================
 # 历史记录
-# =================
+# =====================
+
 
 if st.session_state.history:
 
 
     st.divider()
 
-
-    st.subheader("📋 历史报价")
-
-
-    history_df=pd.DataFrame(
-        st.session_state.history
+    st.subheader(
+        "📋 最近报价"
     )
 
 
     st.dataframe(
-        history_df,
+
+        pd.DataFrame(
+            st.session_state.history
+        ),
+
         use_container_width=True
+
     )
