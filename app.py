@@ -8,6 +8,7 @@ import pandas as pd
 
 st.set_page_config(
     page_title="花店报价工具",
+    page_icon="🌸",
     layout="centered"
 )
 
@@ -18,14 +19,8 @@ st.set_page_config(
 
 file_name = "flower_database.xlsx"
 
-
 df = pd.read_excel(file_name)
 
-
-
-# =================
-# 检查字段
-# =================
 
 required_columns = [
     "名称",
@@ -40,9 +35,7 @@ for col in required_columns:
 
     if col not in df.columns:
 
-        st.error(
-            f"Excel缺少字段：{col}"
-        )
+        st.error(f"Excel缺少字段：{col}")
 
         st.stop()
 
@@ -58,9 +51,6 @@ flowers = {}
 for _, row in df.iterrows():
 
     name = row["名称"]
-
-
-    # 单枝成本
 
     if "单枝成本" in df.columns and pd.notna(row["单枝成本"]):
 
@@ -97,150 +87,89 @@ for _, row in df.iterrows():
 
 st.title("🌸 花店报价工具")
 
+st.caption(
+    "内部员工使用｜快速计算花材成本与建议售价"
+)
+
 
 
 # =================
 # 采购信息
 # =================
 
-st.subheader("采购信息")
+with st.expander("📦 采购信息"):
+
+    freight = st.number_input(
+        "本次采购运费（元）",
+        min_value=0,
+        value=80
+    )
 
 
-freight = st.number_input(
-    "本次采购运费（元）",
-    min_value=0,
-    value=80
-)
-
-
-total_batch = st.number_input(
-    "本次采购总扎数",
-    min_value=1,
-    value=50
-)
+    total_batch = st.number_input(
+        "本次采购总扎数",
+        min_value=1,
+        value=50
+    )
 
 
 batch_freight = freight / total_batch
 
 
-st.write(
+
+st.info(
     f"平均每扎运费：{round(batch_freight,2)}元"
 )
 
 
 
+# =================
+# 搜索花材
+# =================
+
 st.divider()
 
+st.subheader("🌹 选择花材")
 
 
-# =================
-# 花材分类
-# =================
-
-flower_types = {}
-
-leaf_types = {}
+search = st.text_input(
+    "搜索花材名称"
+)
 
 
-for name, data in flowers.items():
+all_names = list(flowers.keys())
 
 
-    category = data["flower_type"]
+if search:
 
+    search_result = [
 
-    if data["type"] == "花材":
+        x for x in all_names
 
+        if search in x
 
-        if category not in flower_types:
+    ]
 
-            flower_types[category] = []
+else:
 
-
-        flower_types[category].append(name)
+    search_result = all_names
 
 
 
-    elif data["type"] == "叶材":
+selected_all = st.multiselect(
 
+    "选择花材",
 
-        if category not in leaf_types:
+    search_result
 
-            leaf_types[category] = []
-
-
-        leaf_types[category].append(name)
+)
 
 
 
 # =================
-# 选择花材
+# 数量
 # =================
 
-st.subheader("选择花材")
-
-
-selected_flowers = []
-
-
-for category, items in flower_types.items():
-
-
-    with st.expander(category):
-
-
-        result = st.multiselect(
-
-            "选择",
-
-            items,
-
-            key="flower_"+category
-
-        )
-
-
-        selected_flowers.extend(result)
-
-
-
-# =================
-# 选择叶材
-# =================
-
-st.subheader("选择叶材")
-
-
-selected_leaf = []
-
-
-for category, items in leaf_types.items():
-
-
-    with st.expander(category):
-
-
-        result = st.multiselect(
-
-            "选择",
-
-            items,
-
-            key="leaf_"+category
-
-        )
-
-
-        selected_leaf.extend(result)
-
-
-
-selected_all = selected_flowers + selected_leaf
-
-
-
-# =================
-# 数量输入
-# =================
 
 cost_total = 0
 
@@ -257,7 +186,7 @@ if selected_all:
 
         quantity = st.number_input(
 
-            f"{item} 使用数量（枝）",
+            f"{item}（枝）",
 
             min_value=1,
 
@@ -265,12 +194,10 @@ if selected_all:
 
             step=1,
 
-            key="num_"+item
+            key=item
 
         )
 
-
-        # 每枝运费
 
         freight_per_branch = (
 
@@ -307,14 +234,17 @@ if selected_all:
 
 
 # =================
-# 计算报价
+# 计算
 # =================
 
-if st.button("计算报价"):
+
+if st.button(
+    "🌸 生成报价",
+    use_container_width=True
+):
 
 
     if not selected_all:
-
 
         st.warning(
             "请选择花材"
@@ -324,10 +254,10 @@ if st.button("计算报价"):
     else:
 
 
-        cost_x3 = cost_total * 3
-
-
         labor = 100
+
+
+        cost_x3 = cost_total * 3
 
 
         final_price = cost_x3 + labor
@@ -342,11 +272,13 @@ if st.button("计算报价"):
         )
 
 
+        detail = ""
+
 
         for item in selected_all:
 
 
-            quantity = st.session_state["num_"+item]
+            quantity = st.session_state[item]
 
 
             freight_per_branch = (
@@ -371,11 +303,26 @@ if st.button("计算报价"):
             )
 
 
-            st.write(
+            detail += (
 
-                f"{item}：{quantity}枝 × {round(real_single_cost,2)}元 = {round(quantity*real_single_cost,2)}元"
+                f"""
+🌸 {item}
 
+数量：{quantity}枝
+
+单枝成本：
+¥{round(real_single_cost,2)}
+
+小计：
+¥{round(quantity*real_single_cost,2)}
+
+---
+
+"""
             )
+
+
+        st.text(detail)
 
 
 
@@ -383,66 +330,33 @@ if st.button("计算报价"):
 
 
 
-        st.write(
-            "真实成本：",
-            round(cost_total,2),
-            "元"
+        st.metric(
+            "真实成本",
+            f"¥{round(cost_total,2)}"
         )
 
 
-        st.write(
-            "成本×3：",
-            round(cost_x3,2),
-            "元"
+        st.metric(
+            "基础售价",
+            f"¥{round(final_price,2)}"
         )
 
 
-        st.write(
-            "人工杂费：",
-            labor,
-            "元"
-        )
-
-
-        st.write(
-            "基础售价：",
-            round(final_price,2),
-            "元"
-        )
-
-
-
-        # =================
-        # 自动匹配售价
-        # =================
 
         price_level = [
 
-            56,
-            68,
-            88,
-            98,
-            128,
-            158,
-            198,
-            228,
-            268,
-            298,
-            358,
-            398,
-            498,
-            598,
-            698,
-            898,
-            998,
-            1098,
-            1198,
-            1298
+            56,68,88,98,
+            128,158,198,
+            228,268,298,
+            358,398,498,
+            598,698,898,
+            998,1098,
+            1198,1298
 
         ]
 
 
-        recommended_price = price_level[-1]
+        recommended_price = 1298
 
 
         for price in price_level:
@@ -458,6 +372,6 @@ if st.button("计算报价"):
 
         st.success(
 
-            f"建议零售价：{recommended_price}元"
+            f"🌸 建议零售价：¥{recommended_price}"
 
         )
