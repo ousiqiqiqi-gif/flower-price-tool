@@ -16,7 +16,7 @@ st.set_page_config(
 # 读取数据库
 # =================
 
-file_name = "花店报价数据库_报价专用版.xlsx"
+file_name = "flower_database.xlsx"
 
 
 df = pd.read_excel(file_name)
