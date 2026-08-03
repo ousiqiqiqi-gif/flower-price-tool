@@ -190,63 +190,76 @@ materials = {}
 
 for _, row in material_df.iterrows():
 
-    name = row["名称"]
+
+    name = str(row["名称"])
 
 
-    # 价格处理
+    # 防止同名不同规格覆盖
 
-    price = 0
+    key = (
 
+        name
 
-    if "价格" in material_df.columns:
+        +
 
-        raw_price = row["价格"]
+        "_"
 
+        +
 
-        try:
+        str(row["规格"])
 
-            price = float(raw_price)
-
-
-        except:
-
-            price = 0
-
-
-
-    # 现金代取特殊处理
-
-    if "现金代取" in str(name):
-
-        price = 0.003
+    )
 
 
 
-    materials[name] = {
+    try:
+
+        price = float(row["价格"])
+
+    except:
+
+        price = 0
+
+
+
+    materials[key] = {
+
+
+        "显示名称":
+
+            name,
+
 
 
         "一级分类":
 
-            str(row["一级分类"]),
+            str(row["一级分类"])
+            if pd.notna(row["一级分类"])
+            else "其他包装",
+
 
 
         "二级分类":
 
-            str(row["二级分类"]),
+            str(row["二级分类"])
+            if pd.notna(row["二级分类"])
+            else "",
+
 
 
         "规格":
 
-            str(row["规格"]),
+            str(row["规格"])
+            if pd.notna(row["规格"])
+            else "",
+
 
 
         "价格":
 
             price
 
-
     }
-
 
 
 
@@ -357,13 +370,21 @@ material_types = {}
 
 
 
-for name,data in materials.items():
+material_types = {}
 
 
-    first = data["一级分类"]
+for key,data in materials.items():
 
-    second = data["二级分类"]
 
+    category = data["一级分类"]
+
+
+    if category not in material_types:
+
+        material_types[category] = []
+
+
+    material_types[category].append(key)
 
 
     # 娃娃特殊处理
