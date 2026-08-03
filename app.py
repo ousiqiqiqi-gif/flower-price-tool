@@ -107,33 +107,79 @@ for _, row in df.iterrows():
 
     else:
 
-        cost = (
+try:
 
-            float(row["单价"])
+    bunch_count = float(
+        row["每扎数量"]
+    )
 
-            /
+except:
 
-            float(row["每扎数量"])
-
-        )
-
-
-    flowers[name] = {
-
-        "类别": row["类别"],
-
-        "花材类型": row["花材类型"],
-
-        "单枝成本": cost,
+    bunch_count = 1
 
 
-        "每扎数量":
 
-            int(
-                float(row["每扎数量"])
-            )
+try:
 
-    }
+    cost = (
+
+        float(row["单价"])
+
+        /
+
+        bunch_count
+
+    )
+
+except:
+
+    cost = 0
+
+
+# 处理每扎数量
+
+try:
+
+    bunch_count = int(
+        float(row["每扎数量"])
+    )
+
+except:
+
+    bunch_count = 1
+
+
+
+flowers[name] = {
+
+
+    "类别":
+
+        str(row["类别"])
+        if pd.notna(row["类别"])
+        else "花材",
+
+
+
+    "花材类型":
+
+        str(row["花材类型"])
+        if pd.notna(row["花材类型"])
+        else "其他",
+
+
+
+    "单枝成本":
+
+        cost,
+
+
+
+    "每扎数量":
+
+        bunch_count
+
+}
 
 
 
