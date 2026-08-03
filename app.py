@@ -126,8 +126,8 @@ for _, row in df.iterrows():
         "单枝成本": cost,
 
         "每扎数量": int(
-            row["每扎数量"]
-        )
+    float(row["每扎数量"])
+)
 
     }
 
