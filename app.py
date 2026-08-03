@@ -112,7 +112,7 @@ for _, row in df.iterrows():
 
             /
 
-            int(row["每扎数量"])
+            int(float(row["每扎数量"]))
 
         )
 
