@@ -95,39 +95,80 @@ for _, row in df.iterrows():
     name = row["名称"]
 
 
-    if (
-        "单枝成本" in df.columns
-        and pd.notna(row["单枝成本"])
-    ):
+    # 跳过空名称
+    if pd.isna(name):
+        continue
 
-        cost = float(
-            row["单枝成本"]
-        )
 
-    else:
+    # 每扎数量处理
 
-        cost = (
+    try:
+        bunch_count = int(float(row["每扎数量"]))
+    except:
+        bunch_count = 1
 
-            float(row["单价"])
 
-            /
 
-            int(float(row["每扎数量"]))
+    # 单枝成本处理
 
-        )
+    try:
+
+        if (
+            "单枝成本" in df.columns
+            and pd.notna(row["单枝成本"])
+        ):
+
+            cost = float(
+                row["单枝成本"]
+            )
+
+        else:
+
+            cost = (
+
+                float(row["单价"])
+
+                /
+
+                bunch_count
+
+            )
+
+
+    except:
+
+        cost = 0
+
 
 
     flowers[name] = {
 
-        "类别": row["类别"],
 
-        "花材类型": row["花材类型"],
+        "类别":
 
-        "单枝成本": cost,
+            str(row["类别"])
+            if pd.notna(row["类别"])
+            else "花材",
 
-        "每扎数量": int(
-    float(row["每扎数量"])
-)
+
+
+        "花材类型":
+
+            str(row["花材类型"])
+            if pd.notna(row["花材类型"])
+            else "其他花材",
+
+
+
+        "单枝成本":
+
+            cost,
+
+
+
+        "每扎数量":
+
+            bunch_count
 
     }
 
