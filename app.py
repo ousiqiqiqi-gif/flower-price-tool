@@ -86,6 +86,10 @@ for c in material_columns:
 # 花材数据整理
 # =====================
 
+# =====================
+# 花材数据整理
+# =====================
+
 flowers = {}
 
 
@@ -94,7 +98,7 @@ for _, row in df.iterrows():
     name = row["名称"]
 
 
-    # 单枝成本优先读取
+    # 计算单枝成本
 
     if (
         "单枝成本" in df.columns
@@ -107,80 +111,74 @@ for _, row in df.iterrows():
 
     else:
 
-try:
+        try:
 
-    bunch_count = float(
-        row["每扎数量"]
-    )
+            price = float(
+                row["单价"]
+            )
 
-except:
+            bunch_count = float(
+                row["每扎数量"]
+            )
 
-    bunch_count = 1
-
-
-
-try:
-
-    cost = (
-
-        float(row["单价"])
-
-        /
-
-        bunch_count
-
-    )
-
-except:
-
-    cost = 0
+            if bunch_count <= 0:
+                bunch_count = 1
 
 
-# 处理每扎数量
+            cost = price / bunch_count
 
-try:
 
-    bunch_count = int(
-        float(row["每扎数量"])
-    )
+        except:
 
-except:
-
-    bunch_count = 1
+            cost = 0
 
 
 
-flowers[name] = {
+    # 处理每扎数量
+
+    try:
+
+        bunch_count = int(
+            float(row["每扎数量"])
+        )
 
 
-    "类别":
+    except:
 
-        str(row["类别"])
-        if pd.notna(row["类别"])
-        else "花材",
-
-
-
-    "花材类型":
-
-        str(row["花材类型"])
-        if pd.notna(row["花材类型"])
-        else "其他",
+        bunch_count = 1
 
 
 
-    "单枝成本":
-
-        cost,
+    flowers[name] = {
 
 
+        "类别":
 
-    "每扎数量":
+            str(row["类别"])
+            if pd.notna(row["类别"])
+            else "花材",
 
-        bunch_count
 
-}
 
+        "花材类型":
+
+            str(row["花材类型"])
+            if pd.notna(row["花材类型"])
+            else "其他",
+
+
+
+        "单枝成本":
+
+            cost,
+
+
+
+        "每扎数量":
+
+            bunch_count
+
+    }
 
 
 # =====================
