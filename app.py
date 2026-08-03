@@ -186,21 +186,33 @@ for _, row in material_df.iterrows():
     name = row["名称"]
 
 
-    materials[name] = {
+    # 处理价格
 
-        "一级分类":
-            row["一级分类"],
+try:
 
-        "二级分类":
-            row["二级分类"],
+    price = float(row["价格"])
 
-        "规格":
-            row["规格"],
+except:
 
-        "价格":
-            float(row["价格"])
+    price = 0
 
-    }
+
+
+materials[name] = {
+
+    "一级分类":
+        row["一级分类"],
+
+    "二级分类":
+        row["二级分类"],
+
+    "规格":
+        row["规格"],
+
+    "价格":
+        price
+
+}
 
 
 
