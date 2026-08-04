@@ -14,6 +14,13 @@ st.set_page_config(
 
 
 # =====================
+# 标题
+# =====================
+
+st.title("🌸 花店报价工具")
+
+
+# =====================
 # 读取数据库
 # =====================
 
@@ -22,14 +29,65 @@ flower_file = "flower_database.xlsx"
 material_file = "material_database.xlsx"
 
 
-df = pd.read_excel(
-    flower_file
-)
+try:
+
+    df = pd.read_excel(
+        flower_file
+    )
+
+except Exception as e:
+
+    st.error(
+        f"花材数据库读取失败：{e}"
+    )
+
+    st.stop()
 
 
-material_df = pd.read_excel(
-    material_file
-)
+
+try:
+
+    material_df = pd.read_excel(
+        material_file
+    )
+
+except Exception as e:
+
+    st.error(
+        f"包装数据库读取失败：{e}"
+    )
+
+    st.stop()
+
+
+
+# =====================
+# 数据清洗
+# =====================
+
+def clean_value(value):
+
+    """
+    清理Excel空值
+    """
+
+    if pd.isna(value):
+
+        return ""
+
+    return str(value).strip()
+
+
+
+# 清洗花材表
+
+df = df.fillna("")
+
+
+
+# 清洗包装表
+
+material_df = material_df.fillna("")
 
 
 
@@ -37,21 +95,24 @@ material_df = pd.read_excel(
 # 花材字段检查
 # =====================
 
-need_columns = [
+
+flower_columns = [
+
     "名称",
     "类别",
     "花材类型",
     "单价",
     "每扎数量"
+
 ]
 
 
-for c in need_columns:
+for col in flower_columns:
 
-    if c not in df.columns:
+    if col not in df.columns:
 
         st.error(
-            f"花材表缺少字段：{c}"
+            f"花材表缺少字段：{col}"
         )
 
         st.stop()
@@ -62,20 +123,24 @@ for c in need_columns:
 # 包装字段检查
 # =====================
 
+
 material_columns = [
+
     "名称",
     "一级分类",
     "二级分类",
-    "规格"
+    "规格",
+    "价格"
+
 ]
 
 
-for c in material_columns:
+for col in material_columns:
 
-    if c not in material_df.columns:
+    if col not in material_df.columns:
 
         st.error(
-            f"包装表缺少字段：{c}"
+            f"包装表缺少字段：{col}"
         )
 
         st.stop()
@@ -83,33 +148,53 @@ for c in material_columns:
 
 
 # =====================
-# 花材数据整理
+# 花材数据库整理
 # =====================
 
-# =====================
-# 花材数据整理
-# =====================
 
 flowers = {}
 
 
+
 for _, row in df.iterrows():
 
-    name = row["名称"]
+
+    name = clean_value(
+        row["名称"]
+    )
 
 
-    # 计算单枝成本
+    if name == "":
+
+        continue
+
+
+
+    # 单枝成本
 
     if (
+
         "单枝成本" in df.columns
-        and pd.notna(row["单枝成本"])
+
+        and
+
+        str(row["单枝成本"]).strip() != ""
+
     ):
 
-        cost = float(
-            row["单枝成本"]
-        )
+        try:
+
+            cost = float(
+                row["单枝成本"]
+            )
+
+        except:
+
+            cost = 0
+
 
     else:
+
 
         try:
 
@@ -117,15 +202,18 @@ for _, row in df.iterrows():
                 row["单价"]
             )
 
-            bunch_count = float(
+
+            qty = float(
                 row["每扎数量"]
             )
 
-            if bunch_count <= 0:
-                bunch_count = 1
+
+            if qty <= 0:
+
+                qty = 1
 
 
-            cost = price / bunch_count
+            cost = price / qty
 
 
         except:
@@ -134,18 +222,19 @@ for _, row in df.iterrows():
 
 
 
-    # 处理每扎数量
+    # 数量处理
 
     try:
 
-        bunch_count = int(
-            float(row["每扎数量"])
+        bunch_qty = int(
+            float(
+                row["每扎数量"]
+            )
         )
-
 
     except:
 
-        bunch_count = 1
+        bunch_qty = 1
 
 
 
@@ -153,68 +242,57 @@ for _, row in df.iterrows():
 
 
         "类别":
-
-            str(row["类别"])
-            if pd.notna(row["类别"])
-            else "花材",
-
+            clean_value(
+                row["类别"]
+            ),
 
 
         "花材类型":
-
-            str(row["花材类型"])
-            if pd.notna(row["花材类型"])
-            else "其他",
-
+            clean_value(
+                row["花材类型"]
+            ),
 
 
         "单枝成本":
-
             cost,
 
 
-
         "每扎数量":
-
-            bunch_count
+            bunch_qty
 
     }
 
 
+
+
 # =====================
-# 包装数据整理
+# 包装数据库整理
 # =====================
 
+
 materials = {}
+
 
 
 for _, row in material_df.iterrows():
 
 
-    name = str(row["名称"])
-
-
-    # 防止同名不同规格覆盖
-
-    key = (
-
-        name
-
-        +
-
-        "_"
-
-        +
-
-        str(row["规格"])
-
+    name = clean_value(
+        row["名称"]
     )
+
+
+    if name == "":
+
+        continue
 
 
 
     try:
 
-        price = float(row["价格"])
+        price = float(
+            row["价格"]
+        )
 
     except:
 
@@ -222,37 +300,28 @@ for _, row in material_df.iterrows():
 
 
 
-    materials[key] = {
-
-
-        "显示名称":
-
-            name,
-
+    materials[name] = {
 
 
         "一级分类":
 
-            str(row["一级分类"])
-            if pd.notna(row["一级分类"])
-            else "其他包装",
-
+            clean_value(
+                row["一级分类"]
+            ),
 
 
         "二级分类":
 
-            str(row["二级分类"])
-            if pd.notna(row["二级分类"])
-            else "",
-
+            clean_value(
+                row["二级分类"]
+            ),
 
 
         "规格":
 
-            str(row["规格"])
-            if pd.notna(row["规格"])
-            else "",
-
+            clean_value(
+                row["规格"]
+            ),
 
 
         "价格":
@@ -264,7 +333,7 @@ for _, row in material_df.iterrows():
 
 
 # =====================
-# 初始化
+# Session 初始化
 # =====================
 
 
@@ -287,17 +356,46 @@ if "history" not in st.session_state:
 
 
 # =====================
-# 标题
+# 采购设置
 # =====================
 
-st.title(
-    "🌸 花店报价工具"
+
+with st.expander("⚙️采购设置"):
+
+
+    freight = st.number_input(
+
+        "本次采购运费",
+
+        min_value=0.0,
+
+        value=80.0
+
+    )
+
+
+    total_batch = st.number_input(
+
+        "采购总扎数",
+
+        min_value=1,
+
+        value=50
+
+    )
+
+
+
+batch_freight = (
+
+    freight / total_batch
+
 )
 
 
 
 # =====================
-# 分类整理
+# 花材分类
 # =====================
 
 
@@ -314,55 +412,52 @@ for name,data in flowers.items():
 
     category = data["类别"]
 
+
     flower_type = data["花材类型"]
 
 
 
-    # 花材
-
     if category == "花材":
 
 
-        if flower_type not in flower_types:
+        flower_types.setdefault(
 
-            flower_types[flower_type] = []
+            flower_type,
+
+            []
+
+        ).append(name)
 
 
-        flower_types[flower_type].append(name)
-
-
-
-    # 叶材
 
     elif category == "叶材":
 
 
-        if flower_type not in leaf_types:
+        leaf_types.setdefault(
 
-            leaf_types[flower_type] = []
+            flower_type,
+
+            []
+
+        ).append(name)
 
 
-        leaf_types[flower_type].append(name)
-
-
-
-    # 干花
 
     elif category == "干花":
 
 
-        if flower_type not in dry_types:
+        dry_types.setdefault(
 
-            dry_types[flower_type] = []
+            flower_type,
 
+            []
 
-        dry_types[flower_type].append(name)
-
+        ).append(name)
 
 
 
 # =====================
-# 包装分类整理
+# 包装分类
 # =====================
 
 
@@ -370,80 +465,32 @@ material_types = {}
 
 
 
-material_types = {}
+for name,data in materials.items():
 
 
-for key,data in materials.items():
+    first = data["一级分类"]
 
 
-    category = data["一级分类"]
+    if first == "":
 
-
-    if category not in material_types:
-
-        material_types[category] = []
-
-
-    material_types[category].append(key)
-
-
-    # 娃娃特殊处理
-
-    if first == "娃娃":
-
-
-        second = "娃娃款式"
+        first = "其他"
 
 
 
-    if first not in material_types:
+    material_types.setdefault(
 
-        material_types[first] = {}
+        first,
 
+        []
 
-
-    if second not in material_types[first]:
-
-        material_types[first][second] = []
-
-
-
-    material_types[first][second].append(name)# =====================
-# 采购设置
-# =====================
-
-with st.expander("⚙️ 采购设置"):
-
-
-    freight = st.number_input(
-
-        "本次采购运费（元）",
-
-        min_value=0,
-
-        value=80
-
-    )
-
-
-    total_batch = st.number_input(
-
-        "本次采购总扎数",
-
-        min_value=1,
-
-        value=50
-
-    )
-
-
-batch_freight = freight / total_batch
+).append(name)
 
 
 
 # =====================
 # 选择花材
 # =====================
+
 
 st.subheader(
     "🌸 选择花材"
@@ -477,9 +524,11 @@ for cat,items in flower_types.items():
 
 
 
+
 # =====================
 # 选择叶材
 # =====================
+
 
 st.subheader(
     "🌿 选择叶材"
@@ -513,9 +562,11 @@ for cat,items in leaf_types.items():
 
 
 
+
 # =====================
 # 选择干花
 # =====================
+
 
 st.subheader(
     "🌾 选择干花"
@@ -549,6 +600,7 @@ for cat,items in dry_types.items():
 
 
 
+
 # =====================
 # 已选花材
 # =====================
@@ -569,7 +621,6 @@ if st.session_state.selected_flowers:
     )
 
 
-
     for item in st.session_state.selected_flowers:
 
 
@@ -578,20 +629,19 @@ if st.session_state.selected_flowers:
         )
 
 
-
         with col1:
 
             st.write(item)
 
 
 
-        key = "qty_"+item
+        qty_key = "qty_"+item
 
 
 
-        if key not in st.session_state:
+        if qty_key not in st.session_state:
 
-            st.session_state[key]=1
+            st.session_state[qty_key] = 1
 
 
 
@@ -606,7 +656,7 @@ if st.session_state.selected_flowers:
 
                 step=1,
 
-                key=key,
+                key=qty_key,
 
                 label_visibility="collapsed"
 
@@ -621,20 +671,22 @@ if st.session_state.selected_flowers:
 
                 "删除",
 
-                key="del_"+item
+                key="delete_flower_"+item
 
             ):
 
 
                 st.session_state.selected_flowers.remove(item)
 
+
+                del st.session_state[qty_key]
+
+
                 st.rerun()
 
 
 
-
-        # 花材成本
-
+        # 运费分摊
 
         freight_cost = (
 
@@ -662,7 +714,9 @@ if st.session_state.selected_flowers:
 
         total_cost += (
 
-            qty *
+            qty
+
+            *
 
             single_cost
 
@@ -673,7 +727,7 @@ if st.session_state.selected_flowers:
 
 
 # =====================
-# 选择包装/辅材
+# 包装选择
 # =====================
 
 
@@ -686,91 +740,219 @@ st.subheader(
 
 
 
-for first,second_dict in material_types.items():
+for category,items in material_types.items():
 
 
-    with st.expander(first):
+    with st.expander(category):
 
 
-        for second,items in second_dict.items():
+        # 娃娃特殊处理
+
+        if category == "娃娃":
 
 
-            # 娃娃不显示二级标题
-
-            if first != "娃娃":
+            options = []
 
 
-                st.markdown(
+            option_map = {}
 
-                    f"### 【{second}】"
+
+
+            for name in items:
+
+
+                display = (
+
+                    materials[name]["名称"]
+                    if "名称" in materials[name]
+                    else name
 
                 )
+
+
+                display += (
+
+                    " | "
+
+                    +
+
+                    materials[name]["规格"]
+
+                    +
+
+                    " | ¥"
+
+                    +
+
+                    str(materials[name]["价格"])
+
+                )
+
+
+                options.append(display)
+
+
+                option_map[display] = name
+
 
 
 
             result = st.multiselect(
 
+                "选择娃娃",
 
+                options,
 
-                "选择",
-
-
-
-                [
-
-                    f"{name} | {materials[name]['规格']} | ¥{materials[name]['价格']}"
-
-                    for name in items
-
-                ],
-
-
-                key="material_"+first+"_"+second
-
-
+                key="doll_select"
 
             )
 
 
 
-            for value in result:
+
+        else:
+
+
+            # 普通包装显示二级分类
+
+
+            sub_tree = {}
 
 
 
-                name = value.split(" | ")[0]
+            for name in items:
+
+
+                second = materials[name]["二级分类"]
+
+
+                if second == "":
+
+                    second = "默认"
 
 
 
-                if name not in [
+                sub_tree.setdefault(
 
+                    second,
 
-                    x["名称"]
+                    []
 
-                    for x in st.session_state.selected_materials
-
-                ]:
-
-
-                    st.session_state.selected_materials.append(
+                ).append(name)
 
 
 
-                        {
 
 
-                            "名称":name,
+            result = []
 
 
-                            "规格":materials[name]["规格"],
+
+            for second,names in sub_tree.items():
 
 
-                            "价格":materials[name]["价格"]
+                st.markdown(
+
+                    f"**{second}**"
+
+                )
 
 
-                        }
+                options = []
 
+
+                option_map = {}
+
+
+
+                for name in names:
+
+
+                    display = (
+
+                        name
+
+                        +
+
+                        " | "
+
+                        +
+
+                        materials[name]["规格"]
+
+                        +
+
+                        " | ¥"
+
+                        +
+
+                        str(materials[name]["价格"])
 
                     )
+
+
+                    options.append(display)
+
+
+                    option_map[display] = name
+
+
+
+                selected = st.multiselect(
+
+                    "选择",
+
+                    options,
+
+                    key="material_"+category+"_"+second
+
+                )
+
+
+
+                for x in selected:
+
+
+                    if x in option_map:
+
+                        name = option_map[x]
+
+
+                        if name not in result:
+
+                            result.append(name)
+
+
+
+        # 保存选择结果
+
+
+        if category == "娃娃":
+
+
+            for x in result:
+
+
+                name = option_map[x]
+
+
+                if name not in st.session_state.selected_materials:
+
+
+                    st.session_state.selected_materials.append(name)
+
+
+
+        else:
+
+
+            for name in result:
+
+
+                if name not in st.session_state.selected_materials:
+
+
+                    st.session_state.selected_materials.append(name)
 
 
 
@@ -792,31 +974,28 @@ if st.session_state.selected_materials:
 
 
     st.subheader(
-
         "🎁 已选包装"
-
     )
 
 
-
-    for item in st.session_state.selected_materials:
-
+    for name in st.session_state.selected_materials:
 
 
-        name = item["名称"]
-
-        price = item["价格"]
+        data = materials[name]
 
 
+        price = data["价格"]
 
-        # 现金代取
 
-        if "现金代取" in name:
+
+        # 现金代取特殊计算
+
+        if "现金" in name:
 
 
             amount = st.number_input(
 
-                "请输入代取金额",
+                "输入代取金额",
 
                 min_value=0,
 
@@ -838,13 +1017,12 @@ if st.session_state.selected_materials:
         col1,col2 = st.columns([4,1])
 
 
-
         with col1:
 
 
             st.write(
 
-                f"{name} | {item['规格']} | ¥{round(price,2)}"
+                f"{name} | {data['规格']} | ¥{round(price,2)}"
 
             )
 
@@ -856,14 +1034,15 @@ if st.session_state.selected_materials:
 
                 "删除",
 
-                key="remove_"+name
+                key="delete_material_"+name
 
             ):
 
 
-                st.session_state.selected_materials.remove(item)
+                st.session_state.selected_materials.remove(name)
 
-                st.rerun()# =====================
+                st.rerun()
+                # =====================
 # 计算报价
 # =====================
 
@@ -873,21 +1052,21 @@ if st.button(
 ):
 
 
-    # 允许：
-    # 1. 只买花材
-    # 2. 只买包装
-    # 3. 花材+包装
-
+    # 没选择任何东西
 
     if (
+
         not st.session_state.selected_flowers
+
         and
+
         not st.session_state.selected_materials
+
     ):
 
 
         st.warning(
-            "请至少选择花材或包装"
+            "请选择花材或包装辅材"
         )
 
 
@@ -896,20 +1075,46 @@ if st.button(
 
 
         # =====================
-        # 人工费用
+        # 花材价格
         # =====================
 
-        labor = 100
+
+        if st.session_state.selected_flowers:
+
+
+            flower_price = (
+
+                total_cost
+
+                *
+
+                3
+
+            )
+
+
+            labor = 100
 
 
 
-        # 花材售价逻辑
-
-        flower_price = total_cost * 3
+        else:
 
 
+            # 只有包装
 
-        # 基础售价
+            flower_price = 0
+
+
+            labor = 0
+
+
+
+
+
+        # =====================
+        # 最终成本
+        # =====================
+
 
         base_price = (
 
@@ -928,47 +1133,29 @@ if st.button(
 
 
         # =====================
-        # 推荐售价阶梯
+        # 售价阶梯
         # =====================
 
 
         price_list = [
 
-
             56,
-
             68,
-
             88,
-
             98,
-
             128,
-
             158,
-
             198,
-
             228,
-
             268,
-
             298,
-
             358,
-
             398,
-
             498,
-
             598,
-
             698,
-
             898,
-
             998,
-
             1298
 
         ]
@@ -992,8 +1179,9 @@ if st.button(
 
 
 
+
         # =====================
-        # 成本计算
+        # 真实成本
         # =====================
 
 
@@ -1013,85 +1201,85 @@ if st.button(
 
 
 
-        profit = recommend - real_cost
+        profit = (
+
+            recommend
+
+            -
+
+            real_cost
+
+        )
+
 
 
 
 
         # =====================
-        # 保存当前报价
+        # 保存报价数据
         # =====================
 
 
         st.session_state.current_quote = {
 
 
-
             "时间":
 
-            datetime.now().strftime(
+                datetime.now().strftime(
 
-                "%Y-%m-%d %H:%M"
+                    "%Y-%m-%d %H:%M"
 
-            ),
+                ),
 
 
 
             "花材":
 
-            "、".join(
+                "、".join(
 
-                st.session_state.selected_flowers
+                    st.session_state.selected_flowers
 
-            ),
+                ),
 
 
 
             "包装":
 
-            "、".join(
+                "、".join(
 
-                [
+                    st.session_state.selected_materials
 
-                    x["名称"]
-
-                    for x in st.session_state.selected_materials
-
-                ]
-
-            ),
+                ),
 
 
 
             "花材成本":
 
-            round(
+                round(
 
-                total_cost,
+                    total_cost,
 
-                2
+                    2
 
-            ),
+                ),
 
 
 
             "包装成本":
 
-            round(
+                round(
 
-                material_cost,
+                    material_cost,
 
-                2
+                    2
 
-            ),
+                ),
 
 
 
             "建议售价":
 
-            recommend
-
-
+                recommend
 
         }
 
@@ -1099,12 +1287,11 @@ if st.button(
 
 
         # =====================
-        # 展示结果
+        # 展示报价
         # =====================
 
 
         st.divider()
-
 
 
         st.subheader(
@@ -1122,11 +1309,13 @@ if st.button(
         )
 
 
+
         st.write(
 
             f"花材成本×3：¥{round(flower_price,2)}"
 
         )
+
 
 
         st.write(
@@ -1136,18 +1325,15 @@ if st.button(
         )
 
 
-        st.write(
 
-            "制作费用：¥100"
-
-        )
+        if labor > 0:
 
 
-        st.write(
+            st.write(
 
-            f"基础售价：¥{round(base_price,2)}"
+                "制作费用：¥100"
 
-        )
+            )
 
 
 
@@ -1168,13 +1354,16 @@ if st.button(
 
 
 
+
+
 # =====================
 # 保存报价
 # =====================
 
 
-if "current_quote" in st.session_state:
-
+if st.session_state.get(
+    "current_quote"
+):
 
 
     st.divider()
@@ -1186,7 +1375,6 @@ if "current_quote" in st.session_state:
         "💾 保存报价"
 
     ):
-
 
 
         st.session_state.history.append(
@@ -1225,12 +1413,15 @@ if st.button(
 
 
 
+    st.session_state.current_quote = None
+
+
+
+    # 清理选择状态
+
     for key in list(
-
         st.session_state.keys()
-
     ):
-
 
 
         if (
@@ -1251,6 +1442,10 @@ if st.button(
 
             or
 
+            key.startswith("doll_")
+
+            or
+
             key.startswith("qty_")
 
             or
@@ -1261,14 +1456,6 @@ if st.button(
 
 
             del st.session_state[key]
-
-
-
-
-    if "current_quote" in st.session_state:
-
-
-        del st.session_state["current_quote"]
 
 
 
@@ -1286,9 +1473,7 @@ if st.button(
 if st.session_state.history:
 
 
-
     st.divider()
-
 
 
     st.subheader(
@@ -1296,7 +1481,6 @@ if st.session_state.history:
         "📋 历史报价"
 
     )
-
 
 
     st.dataframe(
