@@ -785,13 +785,32 @@ for category,items in material_types.items():
     with st.expander(category):
 
 
-        # 娃娃特殊处理
+     # =====================
+# 包装选择
+# =====================
+
+
+st.divider()
+
+
+st.subheader(
+    "🎀 选择包装/辅材"
+)
+
+
+
+for category,items in material_types.items():
+
+
+    with st.expander(category):
+
+
+        # 娃娃直接选择
 
         if category == "娃娃":
 
 
             options = []
-
 
             option_map = {}
 
@@ -802,14 +821,9 @@ for category,items in material_types.items():
 
                 display = (
 
-                    materials[name]["名称"]
-                    if "名称" in materials[name]
-                    else name
+                    name
 
-                )
-
-
-                display += (
+                    +
 
                     " | "
 
@@ -835,7 +849,6 @@ for category,items in material_types.items():
 
 
 
-
             result = st.multiselect(
 
                 "选择娃娃",
@@ -848,75 +861,45 @@ for category,items in material_types.items():
 
 
 
-
         else:
 
 
-            # 普通包装显示二级分类
+            # 普通分类显示二级分类
 
 
-            options = []
-
-option_map = {}
-
-
-for name in items:
-
-
-    display = (
-
-        name
-
-        +
-
-        " | "
-
-        +
-
-        materials[name]["规格"]
-
-        +
-
-        " | ¥"
-
-        +
-
-        str(materials[name]["价格"])
-
-    )
-
-
-    options.append(display)
-
-
-    option_map[display] = name
+            sub_tree = {}
 
 
 
-selected = st.multiselect(
-
-    "选择",
-
-    options,
-
-    key="material_"+category
-
-)
+            for name in items:
 
 
-
-for x in selected:
-
-
-    if x in option_map:
-
-
-        name = option_map[x]
+                second = materials[name].get(
+                    "二级分类",
+                    ""
+                )
 
 
-        if name not in result:
+                if second == "":
 
-            result.append(name)
+                    second = "其他"
+
+
+
+                sub_tree.setdefault(
+
+                    second,
+
+                    []
+
+                ).append(name)
+
+
+
+            result = []
+
+
+
             for second,names in sub_tree.items():
 
 
@@ -928,7 +911,6 @@ for x in selected:
 
 
                 options = []
-
 
                 option_map = {}
 
@@ -984,6 +966,7 @@ for x in selected:
 
                     if x in option_map:
 
+
                         name = option_map[x]
 
 
@@ -993,40 +976,16 @@ for x in selected:
 
 
 
-        # 保存选择结果
+
+        # 保存包装选择
 
 
-        if category == "娃娃":
+        for name in result:
 
 
-            for x in result:
+            if name not in st.session_state.selected_materials:
 
-
-                name = option_map[x]
-
-
-                if name not in st.session_state.selected_materials:
-
-
-                    st.session_state.selected_materials.append(name)
-
-
-
-        else:
-
-
-            for name in result:
-
-
-                if name not in st.session_state.selected_materials:
-
-
-                    st.session_state.selected_materials.append(name)
-
-
-
-
-
+                st.session_state.selected_materials.append(name)   
 # =====================
 # 已选包装
 # =====================
