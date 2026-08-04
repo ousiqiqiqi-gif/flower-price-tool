@@ -508,18 +508,20 @@ for name,data in materials.items():
     first = data["一级分类"]
 
 
-    # 去除空一级分类
-    if pd.isna(first) or first == "":
-
+    # 删除错误分类
+    if (
+        pd.isna(first)
+        or first == ""
+        or first == "一级分类"
+        or first == "二级分类"
+        or first == "名称"
+    ):
         continue
 
 
     material_types.setdefault(
-
         first,
-
         []
-
     ).append(name)
 
 
