@@ -715,7 +715,7 @@ if st.session_state.selected_flowers:
 
                 "删除",
 
-                key="delete_material_"+str(name)
+                key="delete_flower_"+str(name)
 
             ):
 
