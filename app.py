@@ -283,9 +283,15 @@ for _, row in material_df.iterrows():
 
 
     if name == "":
-
         continue
 
+
+    spec = clean_value(
+        row["规格"]
+    )
+
+
+    key = name + "_" + spec
 
 
     try:
@@ -300,35 +306,34 @@ for _, row in material_df.iterrows():
 
 
 
-    materials[name] = {
+    materials[key] = {
+
+
+        "名称":
+            name,
 
 
         "一级分类":
-
             clean_value(
                 row["一级分类"]
             ),
 
 
         "二级分类":
-
             clean_value(
                 row["二级分类"]
             ),
 
 
         "规格":
-
-            clean_value(
-                row["规格"]
-            ),
+            spec,
 
 
         "价格":
-
             price
 
     }
+
 
 
 
@@ -710,7 +715,7 @@ if st.session_state.selected_flowers:
 
                 "删除",
 
-                key="delete_flower_"+item
+                key="delete_material_"+str(name)
 
             ):
 
@@ -794,13 +799,12 @@ for category,items in material_types.items():
             option_map = {}
 
 
-
             for name in items:
 
 
                 display = (
 
-                    name
+                    materials[name]["名称"]
 
                     +
 
@@ -828,15 +832,25 @@ for category,items in material_types.items():
 
 
 
-            result = st.multiselect(
+            selected_display = st.multiselect(
 
                 "选择娃娃",
 
                 options,
 
-                key="doll_select"
+                key="doll_select_"+category
 
             )
+
+
+            result = []
+
+
+            for x in selected_display:
+
+                result.append(option_map[x])
+
+
 
 
 
@@ -861,8 +875,7 @@ for category,items in material_types.items():
 
                 if second == "":
 
-                    second = "其他"
-
+                   second = "其他"
 
 
                 sub_tree.setdefault(
@@ -900,23 +913,23 @@ for category,items in material_types.items():
 
                     display = (
 
-                        name
+                       materials[name]["名称"]
 
-                        +
+                       +
 
-                        " | "
+                       " | "
 
-                        +
+                       +
 
-                        materials[name]["规格"]
+                       materials[name]["规格"]
 
-                        +
+                       +
 
-                        " | ¥"
+                       " | ¥"
 
-                        +
+                       +
 
-                        str(materials[name]["价格"])
+                       str(materials[name]["价格"])
 
                     )
 
@@ -1029,7 +1042,7 @@ if st.session_state.selected_materials:
 
             st.write(
 
-                f"{name} | {data['规格']} | ¥{round(price,2)}"
+                f"{data['名称']} | {data['规格']} | ¥{round(price,2)}"
 
             )
 
@@ -1254,9 +1267,13 @@ if st.button(
 
                 "、".join(
 
-                    st.session_state.selected_materials
+                    [
+                        materials[x]["名称"]+"-"+materials[x]["规格"]
 
-                ),
+                        for x in st.session_state.selected_materials
+                    ]
+
+                 ),
 
 
 
