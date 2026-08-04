@@ -502,17 +502,16 @@ for name,data in flowers.items():
 material_types = {}
 
 
-
 for name,data in materials.items():
 
 
     first = data["一级分类"]
 
 
-    if first == "":
+    # 去除空一级分类
+    if pd.isna(first) or first == "":
 
-        first = "其他"
-
+        continue
 
 
     material_types.setdefault(
@@ -521,7 +520,7 @@ for name,data in materials.items():
 
         []
 
-).append(name)
+    ).append(name)
 
 
 
@@ -854,38 +853,68 @@ for category,items in material_types.items():
             # 普通包装显示二级分类
 
 
-            sub_tree = {}
+            options = []
+
+option_map = {}
+
+
+for name in items:
+
+
+    display = (
+
+        name
+
+        +
+
+        " | "
+
+        +
+
+        materials[name]["规格"]
+
+        +
+
+        " | ¥"
+
+        +
+
+        str(materials[name]["价格"])
+
+    )
+
+
+    options.append(display)
+
+
+    option_map[display] = name
 
 
 
-            for name in items:
+selected = st.multiselect(
 
+    "选择",
 
-                second = materials[name]["二级分类"]
+    options,
 
+    key="material_"+category
 
-                if second == "":
-
-                    second = "默认"
-
-
-
-                sub_tree.setdefault(
-
-                    second,
-
-                    []
-
-                ).append(name)
+)
 
 
 
+for x in selected:
 
 
-            result = []
+    if x in option_map:
 
 
+        name = option_map[x]
 
+
+        if name not in result:
+
+            result.append(name)
             for second,names in sub_tree.items():
 
 
