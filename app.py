@@ -410,14 +410,23 @@ dry_types = {}
 for name,data in flowers.items():
 
 
-    category = data["类别"]
+    category = str(
+        data["类别"]
+    ).strip()
 
 
-    flower_type = data["花材类型"]
+    flower_type = str(
+        data["花材类型"]
+    ).strip()
 
 
 
-    if category == "花材":
+    # 花材
+
+    if category in [
+        "花材",
+        "鲜花"
+    ]:
 
 
         flower_types.setdefault(
@@ -430,10 +439,38 @@ for name,data in flowers.items():
 
 
 
-    elif category == "叶材":
+    # 叶材
+
+    elif category in [
+        "叶材",
+        "绿叶"
+    ]:
 
 
         leaf_types.setdefault(
+
+            flower_type,
+
+            []
+
+        ).append(name)
+
+
+
+    # 干花（兼容各种写法）
+
+    elif (
+
+        "干" in category
+
+        or
+
+        "干" in flower_type
+
+    ):
+
+
+        dry_types.setdefault(
 
             flower_type,
 
@@ -459,6 +496,9 @@ for name,data in flowers.items():
 # =====================
 # 包装分类
 # =====================
+
+
+st.write("干花检测：", dry_types)
 
 
 material_types = {}
