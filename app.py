@@ -498,8 +498,6 @@ for name,data in flowers.items():
 # =====================
 
 
-st.write("干花检测：", dry_types)
-
 
 material_types = {}
 
