@@ -504,15 +504,18 @@ material_types = {}
 
 for name,data in materials.items():
 
-    first = data["一级分类"]
+    first = data.get("一级分类","")
 
 
-    # 删除表头污染数据
-    if (
-        pd.isna(first)
-        or first == ""
-        or first == "一级分类"
-    ):
+    if pd.isna(first):
+        first = ""
+
+
+    if first.strip() == "":
+        first = "其他"
+
+
+    if first in ["一级分类","二级分类"]:
         continue
 
 
